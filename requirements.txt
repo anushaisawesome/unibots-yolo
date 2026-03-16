@@ -1,0 +1,3 @@
+opencv-python==4.8.1.78
+inference-sdk>=0.18.0
+python-dotenv==1.0.0

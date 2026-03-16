@@ -1,39 +1,48 @@
-from ultralytics import YOLO
 import cv2
-import torch
+import os
+from dotenv import load_dotenv
+from inference_sdk import InferenceHTTPClient
+from inference_sdk.webrtc import WebcamSource, StreamConfig, VideoMetadata
 
+# Load environment variables from .env file
+load_dotenv()
 
-model = YOLO("runs/detect/train8/weights/best.pt")  # load best model from training
+# Initialize client
+client = InferenceHTTPClient.init(
+    api_url="http://localhost:9001",
+    api_key=os.getenv("ROBOFLOW_API_KEY")
+)
 
-# start webcam
-cap = cv2.VideoCapture(0)
-cap.set(3, 640)
-cap.set(4, 480)
+# Configure video source (webcam)
+source = WebcamSource(resolution=(1280, 720))
 
+# Configure streaming options
+config = StreamConfig(
+    # stream_output=["my_stream_output"], # Uncomment and check your stream output name
+    data_output=["predictions"]      # Get prediction data via datachannel,
+    processing_timeout=3600              # 60 minutes
+)
 
+# Create streaming session
+session = client.webrtc.stream(
+    source=source,
+    workflow="custom-workflow",
+    workspace="anushas-workspace-kso2j",
+    image_input="image",
+    config=config
+)
 
-# Loop through the video frames
-while cap.isOpened():
-    # Read a frame from the video
-    success, frame = cap.read()
+# Handle incoming video frames
+@session.on_frame
+def show_frame(frame, metadata):
+    cv2.imshow("Workflow Output", frame)
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        session.close()
 
-    if success:
-        # Run YOLO26 tracking on the frame, persisting tracks between frames
-        results = model.track(frame, persist=True)
+# Handle prediction data via datachannel
+@session.on_data()
+def on_data(data: dict, metadata: VideoMetadata):
+    print(f"Frame {metadata.frame_id}: {data}")
 
-        # Visualize the results on the frame
-        annotated_frame = results[0].plot()
-
-        # Display the annotated frame
-        cv2.imshow("YOLO26 Tracking", annotated_frame)
-
-        # Break the loop if ESC is pressed
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
-    else:
-        # Break the loop if the end of the video is reached
-        break
-
-# Release the video capture object and close the display window
-cap.release()
-cv2.destroyAllWindows()
+# Run the session (blocks until closed)
+session.run()
