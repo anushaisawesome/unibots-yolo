@@ -1,48 +1,82 @@
 import cv2
 import os
 from dotenv import load_dotenv
-from inference_sdk import InferenceHTTPClient
-from inference_sdk.webrtc import WebcamSource, StreamConfig, VideoMetadata
+import requests
+import json
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Initialize client
-client = InferenceHTTPClient.init(
-    api_url="http://localhost:9001",
-    api_key=os.getenv("ROBOFLOW_API_KEY")
-)
+API_KEY = os.getenv("ROBOFLOW_API_KEY", "qncEDfiUooZ7Q01hojBk")
+# Update these with your actual Roboflow project details
+PROJECT_ID = "ball-dataset-merged"  # Replace with your project ID
+VERSION = 1  # Replace with your model version
+MODEL_ID = f"{PROJECT_ID}/{VERSION}"
 
-# Configure video source (webcam)
-source = WebcamSource(resolution=(1280, 720))
+# Start webcam
+cap = cv2.VideoCapture(0)
+cap.set(3, 640)
+cap.set(4, 480)
 
-# Configure streaming options
-config = StreamConfig(
-    # stream_output=["my_stream_output"], # Uncomment and check your stream output name
-    data_output=["predictions"]      # Get prediction data via datachannel,
-    processing_timeout=3600              # 60 minutes
-)
+print(f"🚀 Starting ball detection with model: {MODEL_ID}")
+print("Press 'q' to quit\n")
 
-# Create streaming session
-session = client.webrtc.stream(
-    source=source,
-    workflow="custom-workflow",
-    workspace="anushas-workspace-kso2j",
-    image_input="image",
-    config=config
-)
+frame_count = 0
 
-# Handle incoming video frames
-@session.on_frame
-def show_frame(frame, metadata):
-    cv2.imshow("Workflow Output", frame)
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        session.close()
+while cap.isOpened():
+    success, frame = cap.read()
+    
+    if success:
+        frame_count += 1
+        
+        # Convert to JPEG for API
+        _, buffer = cv2.imencode('.jpg', frame)
+        
+        # Send to Roboflow API
+        try:
+            response = requests.post(
+                f"https://detect.roboflow.com/{MODEL_ID}",
+                params={"api_key": API_KEY},
+                files={"imageToUpload": ("imageToUpload", buffer.tobytes(), "image/jpeg")},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Draw predictions
+                if "predictions" in result:
+                    predictions = result["predictions"]
+                    print(f"Frame {frame_count}: {len(predictions)} objects detected")
+                    
+                    for pred in predictions:
+                        x = int(pred["x"] - pred["width"] / 2)
+                        y = int(pred["y"] - pred["height"] / 2)
+                        w = int(pred["width"])
+                        h = int(pred["height"])
+                        conf = pred.get("confidence", 0)
+                        class_name = pred.get("class", "unknown")
+                        
+                        # Draw rectangle
+                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                        
+                        # Draw label
+                        label = f"{class_name} ({conf:.2f})"
+                        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+        except Exception as e:
+            print(f"API Error: {e}")
+        
+        # Show frame
+        cv2.imshow("Ball Detection", frame)
+        
+        # Break on 'q'
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+    else:
+        break
 
-# Handle prediction data via datachannel
-@session.on_data()
-def on_data(data: dict, metadata: VideoMetadata):
-    print(f"Frame {metadata.frame_id}: {data}")
+cap.release()
+cv2.destroyAllWindows()
+print("\n✅ Detection stopped")
 
-# Run the session (blocks until closed)
-session.run()
