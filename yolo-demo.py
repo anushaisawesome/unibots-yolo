@@ -36,8 +36,8 @@ while cap.isOpened():
         try:
             response = requests.post(
                 f"https://detect.roboflow.com/{MODEL_ID}",
-                params={"api_key": API_KEY},
-                files={"imageToUpload": ("imageToUpload", buffer.tobytes(), "image/jpeg")},
+                params={"api_key": API_KEY, "confidence": 40},
+                files={"file": ("image.jpg", buffer.tobytes(), "image/jpeg")},
                 timeout=10
             )
             
@@ -47,7 +47,6 @@ while cap.isOpened():
                 # Draw predictions
                 if "predictions" in result:
                     predictions = result["predictions"]
-                    print(f"Frame {frame_count}: {len(predictions)} objects detected")
                     
                     for pred in predictions:
                         x = int(pred["x"] - pred["width"] / 2)
@@ -57,12 +56,17 @@ while cap.isOpened():
                         conf = pred.get("confidence", 0)
                         class_name = pred.get("class", "unknown")
                         
+                        # Print to console to clarify 'o' vs '0'
+                        print(f"Frame {frame_count}: Detected '{class_name}' ({conf:.2f})")
+                        
                         # Draw rectangle
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                         
                         # Draw label
                         label = f"{class_name} ({conf:.2f})"
                         cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            else:
+                print(f"API Error: Status {response.status_code} - {response.text}")
             
         except Exception as e:
             print(f"API Error: {e}")
@@ -79,4 +83,3 @@ while cap.isOpened():
 cap.release()
 cv2.destroyAllWindows()
 print("\n✅ Detection stopped")
-
