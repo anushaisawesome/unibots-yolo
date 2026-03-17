@@ -7,10 +7,13 @@ import json
 # Load environment variables
 load_dotenv()
 
-API_KEY = os.getenv("ROBOFLOW_API_KEY", "qncEDfiUooZ7Q01hojBk")
+API_KEY = os.getenv("ROBOFLOW_API_KEY")
+if not API_KEY:
+    print("❌ Error: ROBOFLOW_API_KEY not set. Please add it to your .env file.")
+    exit(1)
 # Update these with your actual Roboflow project details
 PROJECT_ID = "ball-dataset-merged"  # Replace with your project ID
-VERSION = 1  # Replace with your model version
+VERSION = 2  # Replace with your model version
 MODEL_ID = f"{PROJECT_ID}/{VERSION}"
 
 # Start webcam
