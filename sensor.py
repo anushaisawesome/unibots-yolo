@@ -1,41 +1,41 @@
-import RPi.GPIO as GPIO
-import time
+"""
+sensor.py
+=========
+Break-beam sensor — imported by yolo-demo.py.
 
-# GPIO setup
+Wire your beam receiver OUT pin to GPIO 25
+(GPIO 17 is taken by the left wheel encoder).
+"""
+
+import RPi.GPIO as GPIO
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-BEAM_PIN = 17   # GPIO connected to receiver OUT
+BEAM_PIN = 25   # ⚠️  Changed from 17 — encoder uses 17
 
 GPIO.setup(BEAM_PIN, GPIO.IN)
 
+
 def beam_broken():
     """
-    Returns True if beam is broken
-    Returns False if beam is intact
+    Returns True if the beam is broken (ball passing through collector).
+    Returns False if the beam is intact.
     """
-
-    if GPIO.input(BEAM_PIN) == GPIO.LOW:
-        return True
-    else:
-        return False
+    return GPIO.input(BEAM_PIN) == GPIO.LOW
 
 
-try:
+# ── Standalone test ──────────────────────────────────────────
+# Run `python sensor.py` directly to check wiring before full test
 
-    print("Break beam sensor running...")
-
-    while True:
-
-        if beam_broken():
-            print("Beam BROKEN")
-        else:
-            print("Beam intact")
-
-        time.sleep(0.05)
-
-except KeyboardInterrupt:
-    print("Stopping")
-
-finally:
-    GPIO.cleanup()
+if __name__ == "__main__":
+    import time
+    print(f"Break-beam sensor test on GPIO {BEAM_PIN} — Ctrl+C to stop")
+    try:
+        while True:
+            print("BROKEN" if beam_broken() else "intact")
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("Done")
+    finally:
+        GPIO.cleanup()
