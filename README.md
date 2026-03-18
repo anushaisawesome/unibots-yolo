@@ -115,4 +115,3 @@ All in the top section of `yolo-demo.py`:
 
 - Never commit `.env` — it's in `.gitignore`
 - `venv/` is also gitignored
-- `Localisation.py`, `Main_robot.py`, `behaviour.py`, `NavigationAfterSpottingBall.py` are kept for reference but not used
