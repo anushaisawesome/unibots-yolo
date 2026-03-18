@@ -1,50 +1,26 @@
 # Unibots Ball Grabbing Robot
 
-A Raspberry Pi robot that detects and collects balls using a YOLO model served from a Mac inference server.
+A Raspberry Pi robot that detects and collects balls using a Roboflow-trained YOLO model running entirely on-device.
 
 ---
 
 ## Architecture
 
-```
-Mac  ──────────────────────────────────────────────────
-  inference server (port 9001)
-  runs the YOLO model, receives frames, returns detections
+Everything runs on the Pi. No Mac needed during competition.
 
-Raspberry Pi  ─────────────────────────────────────────
-  captures camera frames
-  sends frames to Mac over WiFi
-  drives motors based on detections
-  state machine: SEARCH → APPROACH → COLLECT → RETURN HOME → DROP
+```
+Raspberry Pi
+  camera → inference (Roboflow model, cached on-device) → state machine → motors
 ```
 
-Both devices must be on the **same WiFi network**.
+The model is downloaded from Roboflow on first run, then cached locally.
+After that, no internet connection is needed.
+
+State machine: `SEARCHING → APPROACHING → COLLECTING → RETURNING_HOME → DROPPING`
 
 ---
 
-## Mac Setup (inference server)
-
-### 1. Install the inference server
-```bash
-pip install inference
-```
-
-### 2. Start the server
-```bash
-inference server start
-```
-
-Leave this running whenever you use the robot. The server listens on port 9001.
-
-### 3. Find your Mac's IP address
-```bash
-ifconfig | grep "inet 10."
-```
-You'll need this for the Pi's `.env` file.
-
----
-
-## Raspberry Pi Setup
+## Pi Setup
 
 ### 1. Clone the repo
 ```bash
@@ -64,39 +40,48 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+> ⚠️ `inference` is a large install — give it a few minutes on the Pi.
+
 ### 4. Set up environment variables
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and fill in your values:
+Open `.env` and fill in:
 ```
 ROBOFLOW_API_KEY=your_api_key_here
-MAC_IP=10.X.X.X
 PROJECT_ID=ball-dataset-merged
 MODEL_VERSION=2
 ```
 
-Your Roboflow API key is at **roboflow.com → Settings → API**.
+Your API key is at **roboflow.com → Settings → API**.
 
-### 5. Test the connection to the Mac
+### 5. Download the model (first run only, needs internet)
 ```bash
-curl http://10.X.X.X:9001
+python yolo-demo.py
 ```
-You should get a JSON response. If it times out, the Mac server isn't reachable — check both devices are on the same network.
+
+The first run will download and cache your model. After that the Pi
+doesn't need internet — it uses the cached version automatically.
 
 ### 6. Test the break-beam sensor
 ```bash
 python sensor.py
 ```
-Should print `intact` normally and `BROKEN` when something passes through. The beam uses **GPIO 25** — do not wire it to GPIO 17 (that's used by the left encoder).
+Should print `intact` normally and `BROKEN` when something passes through.
 
-### 7. Run the robot
+---
+
+## Mac Setup (training only)
+
+The Mac is only needed to train the model. Not needed at competition.
+
 ```bash
-python yolo-demo.py
+pip install ultralytics
+python train.py
 ```
 
-Press `q` to quit.
+Upload the trained weights to Roboflow so the Pi can download them.
 
 ---
 
@@ -107,8 +92,8 @@ Press `q` to quit.
 | `yolo-demo.py` | Pi | Main entry point — full state machine |
 | `movement_v2.py` | Pi | Motor control |
 | `sensor.py` | Pi | Break-beam collector confirmation |
-| `.env` | Pi | API key, Mac IP, project config |
-| `train.py` | Mac | Model training (already done) |
+| `.env` | Pi | API key + project config |
+| `train.py` | Mac | Model training |
 
 ---
 
@@ -120,7 +105,7 @@ Press `q` to quit.
 | 18 | Left encoder B |
 | 27 | Right encoder A |
 | 22 | Right encoder B |
-| 25 | Break-beam sensor |
+| 25 | Break-beam sensor ⚠️ NOT pin 17 |
 
 ---
 
@@ -133,11 +118,10 @@ All in the top section of `yolo-demo.py`:
 | `BASE_SPEED` | 80 | Forward drive speed (0–100) |
 | `SEARCH_SPEED` | 40 | Rotation speed while scanning |
 | `Kp` | 0.12 | Steering correction strength |
-| `COLLECTION_THRESHOLD` | 200 | Ball pixel-width that triggers collecting |
+| `COLLECTION_THRESHOLD` | 20 | Distance in cm that triggers collecting |
 | `CENTER_TOLERANCE` | 60 | Pixels off-centre before steering kicks in |
 | `MAX_CAPACITY` | 5 | Balls collected before returning home |
 | `RETURN_HOME_TIME_S` | 3 | Seconds of reverse to reach home base |
-| `FRAME_SKIP` | 5 | Send 1 in every N frames to server |
 
 ---
 
@@ -145,4 +129,4 @@ All in the top section of `yolo-demo.py`:
 
 - Never commit `.env` — it's in `.gitignore`
 - `venv/` is also gitignored
-- `Localisation.py`, `Main_robot.py`, `behaviour.py`, `NavigationAfterSpottingBall.py` are kept for reference but not used — the inference server approach replaces them
+- `Localisation.py`, `Main_robot.py`, `behaviour.py`, `NavigationAfterSpottingBall.py` are kept for reference but not used
