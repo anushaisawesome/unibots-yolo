@@ -1,12 +1,12 @@
 # Unibots Ball Grabbing Robot
 
-A Raspberry Pi robot that detects and collects balls using a Roboflow-trained YOLO model running entirely on-device.
+A Raspberry Pi robot that detects and collects balls using a YOLO model trained on Roboflow, running entirely on-device.
 
 ---
 
 ## Architecture
 
-Everything runs on the Pi. No Mac needed during competition.
+Everything runs on the Pi. No Mac needed.
 
 ```
 Raspberry Pi
@@ -20,7 +20,7 @@ State machine: `SEARCHING → APPROACHING → COLLECTING → RETURNING_HOME → 
 
 ---
 
-## Pi Setup
+## Setup
 
 ### 1. Clone the repo
 ```bash
@@ -56,13 +56,13 @@ MODEL_VERSION=2
 
 Your API key is at **roboflow.com → Settings → API**.
 
-### 5. Download the model (first run only, needs internet)
+### 5. First run (needs internet — downloads and caches the model)
 ```bash
 python yolo-demo.py
 ```
 
-The first run will download and cache your model. After that the Pi
-doesn't need internet — it uses the cached version automatically.
+After this the Pi doesn't need internet again — the model is cached locally.
+Do this before competition somewhere with WiFi.
 
 ### 6. Test the break-beam sensor
 ```bash
@@ -72,28 +72,14 @@ Should print `intact` normally and `BROKEN` when something passes through.
 
 ---
 
-## Mac Setup (training only)
-
-The Mac is only needed to train the model. Not needed at competition.
-
-```bash
-pip install ultralytics
-python train.py
-```
-
-Upload the trained weights to Roboflow so the Pi can download them.
-
----
-
 ## Files
 
-| File | Runs on | Purpose |
-|---|---|---|
-| `yolo-demo.py` | Pi | Main entry point — full state machine |
-| `movement_v2.py` | Pi | Motor control |
-| `sensor.py` | Pi | Break-beam collector confirmation |
-| `.env` | Pi | API key + project config |
-| `train.py` | Mac | Model training |
+| File | Purpose |
+|---|---|
+| `yolo-demo.py` | Main entry point — full state machine |
+| `movement_v2.py` | Motor control |
+| `sensor.py` | Break-beam collector confirmation |
+| `.env` | API key + project config |
 
 ---
 
