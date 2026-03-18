@@ -1,6 +1,16 @@
+# ============================================================
+# requirements.txt
+# ============================================================
+# Install on RASPBERRY PI:
+#   pip install -r requirements.txt
+#
+# Install on MAC (inference server + training only):
+#   pip install inference ultralytics
+# ============================================================
+
+# Pi dependencies
 opencv-python>=4.9.0
 requests>=2.28.0
 python-dotenv==1.0.0
-
-
-
+RPi.GPIO
+lgpio
