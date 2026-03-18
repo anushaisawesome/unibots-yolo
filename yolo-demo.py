@@ -32,7 +32,6 @@ DEBUG LEVELS (set at bottom of this file):
 
 import cv2
 import time
-import lgpio
 import numpy as np
 from dotenv import load_dotenv
 import os
@@ -40,6 +39,23 @@ from inference import get_model
 
 import movement_v2
 from sensor import beam_broken
+
+# Try to import lgpio (only available on Raspberry Pi)
+try:
+    import lgpio
+    LGPIO_AVAILABLE = True
+except ImportError:
+    print("⚠️  lgpio not available (expected on Mac, install on Pi with: pip install lgpio)")
+    LGPIO_AVAILABLE = False
+    # Mock lgpio for development
+    class MockLgpio:
+        def gpiochip_open(self, chip): return None
+        def gpio_claim_input(self, h, pin): pass
+        def callback(self, h, gpio, edge, func): pass
+        def gpio_read(self, h, pin): return 0
+        def gpiochip_close(self, h): pass
+        RISING_EDGE = 1
+    lgpio = MockLgpio()
 
 
 # =============================================================
@@ -440,8 +456,8 @@ def run():
                 while time.time() < deadline:
                     beam_status = beam_broken()
 
-                    if DEBUG_BEAM:
-                        dbg("BEAM", f"beam_broken() returned: {beam_status}")
+                    #if DEBUG_BEAM:
+                        #dbg("BEAM", f"beam_broken() returned: {beam_status}")
 
                     if beam_status:
                         dbg("BEAM", "✅ Beam BROKEN — ball confirmed in collector!")

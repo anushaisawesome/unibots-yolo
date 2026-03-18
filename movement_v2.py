@@ -1,7 +1,24 @@
+# Try to import RPi.GPIO (only available on Raspberry Pi)
 try:
     import RPi.GPIO as GPIO
+    GPIO_AVAILABLE = True
 except ImportError:
-    print("GPIO library not available (not running on Raspberry Pi)")
+    print("⚠️  RPi.GPIO not available (expected on Mac, install on Pi with: pip install RPi.GPIO)")
+    GPIO_AVAILABLE = False
+    # Mock GPIO for development
+    class MockGPIO:
+        BCM = 'BCM'
+        OUT = 'OUT'
+        def setmode(self, mode): pass
+        def setwarnings(self, state): pass
+        def setup(self, pin, mode): pass
+        def output(self, pin, state): pass
+        class PWM:
+            def __init__(self, pin, freq): pass
+            def start(self, duty): pass
+            def ChangeDutyCycle(self, duty): pass
+            def stop(self): pass
+    GPIO = MockGPIO()
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
