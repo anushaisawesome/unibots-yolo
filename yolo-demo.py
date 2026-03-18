@@ -26,7 +26,7 @@ from inference import get_model
 import movement_v2
 from sensor import beam_broken
 
-
+# init
 # =============================================================
 # 1.  MODEL + CAMERA
 # =============================================================
@@ -333,6 +333,7 @@ def run():
         cap.release()
         cv2.destroyAllWindows()
         print("Shutdown complete")
+
 
 
 # =============================================================
